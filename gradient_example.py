@@ -1,6 +1,7 @@
 # x**3 + 2 *x + e**3 -3 = 0, x=?
 # https://ctmakro.github.io/site/on_learning/gd.html
 
+
 def expression(x):
     e = 2.718
     return x ** 3 + 2 * x + e ** 3 - 3
