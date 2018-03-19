@@ -1,2 +1,5 @@
-# tf-test
-tmp codes
+# tensorflow-study
+
+### My env
+
+activate tensorflow
