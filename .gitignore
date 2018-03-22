@@ -1,2 +1,4 @@
 /*.py~
 /*.gitignore~
+/src/*.png
+/src/.picasa.ini

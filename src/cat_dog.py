@@ -10,6 +10,7 @@ from scipy import ndimage
 from scipy.misc import imresize, imsave
 
 
+
 data_folder = "d:\\data\\cifar-10-batches-py\\"
 
 # http://www.cs.toronto.edu/~kriz/cifar.html
@@ -22,7 +23,7 @@ data_folder = "d:\\data\\cifar-10-batches-py\\"
 
 # Be familiar with CIFAR-10 dataset
 
-label_name = (
+label_name = [
     'airplane',
     'automobile',
     'bird',
@@ -32,19 +33,130 @@ label_name = (
     'frog',
     'horse',
     'ship',
-    'truck')
+    'truck']
 
-train_count = 40000
+train_count = 10000
 valid_count = 10000
 test_count = 10000
 image_size = 32
 channels = 3
-filter_size = 5
-out_channels = channels
+filter_size = 3
+out_channels = 3
 num_hidden_inc = 32
-batch_size = 50
+batch_size = 128
 classes_number = 10
-learing_rate = 0.01
+learning_rate = 0.1
+stddev = 0.1
+SEED = 11215
+dropout_prob = 0.25
+num_steps = 10000
+
+
+def model():
+    _IMAGE_SIZE = 32
+    _IMAGE_CHANNELS = 3
+    _NUM_CLASSES = 10
+    _RESHAPE_SIZE = 4*4*128
+
+    with tf.name_scope('data'):
+        x = tf.placeholder(tf.float32, shape=[None, _IMAGE_SIZE * _IMAGE_SIZE * _IMAGE_CHANNELS], name='Input')
+        y = tf.placeholder(tf.float32, shape=[None, _NUM_CLASSES], name='Output')
+        x_image = tf.reshape(x, [-1, _IMAGE_SIZE, _IMAGE_SIZE, _IMAGE_CHANNELS], name='images')
+
+    def variable_with_weight_decay(name, shape, stddev, wd):
+        dtype = tf.float32
+        var = variable_on_cpu( name, shape, tf.truncated_normal_initializer(stddev=stddev, dtype=dtype))
+        if wd is not None:
+            weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
+            tf.add_to_collection('losses', weight_decay)
+        return var
+
+    def variable_on_cpu(name, shape, initializer):
+        with tf.device('/cpu:0'):
+            dtype = tf.float32
+            var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype)
+        return var
+
+    with tf.variable_scope('conv1') as scope:
+        kernel = variable_with_weight_decay('weights', shape=[5, 5, 3, 64], stddev=5e-2, wd=0.0)
+        conv = tf.nn.conv2d(x_image, kernel, [1, 1, 1, 1], padding='SAME')
+        biases = variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
+        pre_activation = tf.nn.bias_add(conv, biases)
+        conv1 = tf.nn.relu(pre_activation, name=scope.name)
+    tf.summary.histogram('Convolution_layers/conv1', conv1)
+    tf.summary.scalar('Convolution_layers/conv1', tf.nn.zero_fraction(conv1))
+
+    norm1 = tf.nn.lrn(conv1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='norm1')
+    pool1 = tf.nn.max_pool(norm1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME', name='pool1')
+
+    with tf.variable_scope('conv2') as scope:
+        kernel = variable_with_weight_decay('weights', shape=[5, 5, 64, 64], stddev=5e-2, wd=0.0)
+        conv = tf.nn.conv2d(pool1, kernel, [1, 1, 1, 1], padding='SAME')
+        biases = variable_on_cpu('biases', [64], tf.constant_initializer(0.1))
+        pre_activation = tf.nn.bias_add(conv, biases)
+        conv2 = tf.nn.relu(pre_activation, name=scope.name)
+    tf.summary.histogram('Convolution_layers/conv2', conv2)
+    tf.summary.scalar('Convolution_layers/conv2', tf.nn.zero_fraction(conv2))
+
+    norm2 = tf.nn.lrn(conv2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='norm2')
+    pool2 = tf.nn.max_pool(norm2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME', name='pool2')
+
+    with tf.variable_scope('conv3') as scope:
+        kernel = variable_with_weight_decay('weights', shape=[3, 3, 64, 128], stddev=5e-2, wd=0.0)
+        conv = tf.nn.conv2d(pool2, kernel, [1, 1, 1, 1], padding='SAME')
+        biases = variable_on_cpu('biases', [128], tf.constant_initializer(0.0))
+        pre_activation = tf.nn.bias_add(conv, biases)
+        conv3 = tf.nn.relu(pre_activation, name=scope.name)
+    tf.summary.histogram('Convolution_layers/conv3', conv3)
+    tf.summary.scalar('Convolution_layers/conv3', tf.nn.zero_fraction(conv3))
+
+    with tf.variable_scope('conv4') as scope:
+        kernel = variable_with_weight_decay('weights', shape=[3, 3, 128, 128], stddev=5e-2, wd=0.0)
+        conv = tf.nn.conv2d(conv3, kernel, [1, 1, 1, 1], padding='SAME')
+        biases = variable_on_cpu('biases', [128], tf.constant_initializer(0.0))
+        pre_activation = tf.nn.bias_add(conv, biases)
+        conv4 = tf.nn.relu(pre_activation, name=scope.name)
+    tf.summary.histogram('Convolution_layers/conv4', conv4)
+    tf.summary.scalar('Convolution_layers/conv4', tf.nn.zero_fraction(conv4))
+
+    with tf.variable_scope('conv5') as scope:
+        kernel = variable_with_weight_decay('weights', shape=[3, 3, 128, 128], stddev=5e-2, wd=0.0)
+        conv = tf.nn.conv2d(conv4, kernel, [1, 1, 1, 1], padding='SAME')
+        biases = variable_on_cpu('biases', [128], tf.constant_initializer(0.0))
+        pre_activation = tf.nn.bias_add(conv, biases)
+        conv5 = tf.nn.relu(pre_activation, name=scope.name)
+    tf.summary.histogram('Convolution_layers/conv5', conv5)
+    tf.summary.scalar('Convolution_layers/conv5', tf.nn.zero_fraction(conv5))
+
+    norm3 = tf.nn.lrn(conv5, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='norm3')
+    pool3 = tf.nn.max_pool(norm3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME', name='pool3')
+
+    with tf.variable_scope('fully_connected1') as scope:
+        reshape = tf.reshape(pool3, [-1, _RESHAPE_SIZE])
+        dim = reshape.get_shape()[1].value
+        weights = variable_with_weight_decay('weights', shape=[dim, 384], stddev=0.04, wd=0.004)
+        biases = variable_on_cpu('biases', [384], tf.constant_initializer(0.1))
+        local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases, name=scope.name)
+    tf.summary.histogram('Fully connected layers/fc1', local3)
+    tf.summary.scalar('Fully connected layers/fc1', tf.nn.zero_fraction(local3))
+
+    with tf.variable_scope('fully_connected2') as scope:
+        weights = variable_with_weight_decay('weights', shape=[384, 192], stddev=0.04, wd=0.004)
+        biases = variable_on_cpu('biases', [192], tf.constant_initializer(0.1))
+        local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name=scope.name)
+    tf.summary.histogram('Fully connected layers/fc2', local4)
+    tf.summary.scalar('Fully connected layers/fc2', tf.nn.zero_fraction(local4))
+
+    with tf.variable_scope('output') as scope:
+        weights = variable_with_weight_decay('weights', [192, _NUM_CLASSES], stddev=1 / 192.0, wd=0.0)
+        biases = variable_on_cpu('biases', [_NUM_CLASSES], tf.constant_initializer(0.0))
+        softmax_linear = tf.add(tf.matmul(local4, weights), biases, name=scope.name)
+    tf.summary.histogram('Fully connected layers/output', softmax_linear)
+
+    global_step = tf.Variable(initial_value=0, name='global_step', trainable=False)
+    y_pred_cls = tf.argmax(softmax_linear, axis=1)
+
+    return x, y, softmax_linear, global_step, y_pred_cls
 
 
 def test_unpickle(file):
@@ -71,153 +183,197 @@ def test_unpickle(file):
         imsave("test_reshape.png", dataset_src[0, ...])
 
 
-def get_src_and_target_from_pickle(file):
-    with open(data_folder + file, 'rb') as fo:
-        dict = pickle.load(fo, encoding='bytes')
-        labels = dict[b'labels']
-        data = np.array(dict[b'data']).astype(np.float32) / 255.0
-        count = len(labels)
-
-        dataset_src = np.zeros((count, image_size, image_size, channels))
-        dataset_target = np.zeros(shape=(count, classes_number))
-
-        for i in range(count):
-            rgb = np.zeros((32, 32, 3), dtype=np.float32)
-            rgb[..., 0] = np.array(data[i][:1024]).reshape((32,32))
-            rgb[..., 1] = np.array(data[i][1024:2048]).reshape((32,32))
-            rgb[..., 2] = np.array(data[i][2048:3072]).reshape((32,32))
-            dataset_src[i, ...] = rgb
-            dataset_target[i][labels[i]] = 1.0
-
-        return dataset_src, dataset_target
+def get_data_set(name="train", cifar=10):
+    x = None
+    y = None
+    l = None
 
 
-#test_unpickle(data_folder + "test_batch")
+    folder_name = "cifar-10-batches-py"
+
+    f = open('d:/data/'+folder_name+'/batches.meta', 'rb')
+    datadict = pickle.load(f, encoding='latin1')
+    f.close()
+    l = datadict['label_names']
+
+    if name is "train":
+        for i in range(5):
+            f = open('d:/data/'+folder_name+'/data_batch_' + str(i + 1), 'rb')
+            datadict = pickle.load(f, encoding='latin1')
+            f.close()
+
+            _X = datadict["data"]
+            _Y = datadict['labels']
+
+            _X = np.array(_X, dtype=float) / 255.0
+            _X = _X.reshape([-1, 3, 32, 32])
+            _X = _X.transpose([0, 2, 3, 1])
+            _X = _X.reshape(-1, 32*32*3)
+
+            if x is None:
+                x = _X
+                y = _Y
+            else:
+                x = np.concatenate((x, _X), axis=0)
+                y = np.concatenate((y, _Y), axis=0)
+
+    elif name is "test":
+        f = open('./data_set/'+folder_name+'/test_batch', 'rb')
+        datadict = pickle.load(f, encoding='latin1')
+        f.close()
+
+        x = datadict["data"]
+        y = np.array(datadict['labels'])
+
+        x = np.array(x, dtype=float) / 255.0
+        x = x.reshape([-1, 3, 32, 32])
+        x = x.transpose([0, 2, 3, 1])
+        x = x.reshape(-1, 32*32*3)
+
+    def dense_to_one_hot(labels_dense, num_classes=10):
+        num_labels = labels_dense.shape[0]
+        index_offset = np.arange(num_labels) * num_classes
+        labels_one_hot = np.zeros((num_labels, num_classes))
+        labels_one_hot.flat[index_offset + labels_dense.ravel()] = 1
+
+        return labels_one_hot
+
+    return x, dense_to_one_hot(y), l
 
 
-# Generate Train dataset and Test dataset
-def generate_dataset(train_files, valid_files, test_files):
-    train_src = np.zeros((0, image_size, image_size, channels), dtype=np.float32)
-    valid_src = np.zeros((0, image_size, image_size, channels), dtype=np.float32)
-    test_src = np.zeros((0, image_size, image_size, channels), dtype=np.float32)
-
-    train_target = np.zeros((0, classes_number), dtype=np.float32)
-    valid_target = np.zeros((valid_count, ), dtype=np.float32)
-    test_target = np.zeros((test_count, ), dtype=np.float32)
-    for t in train_files:
-        src, target = get_src_and_target_from_pickle(t)
-        train_src = np.append(train_src, src, axis=0)
-        train_target = np.append(train_target, target, axis=0)
-
-#    for t in valid_files:
-#        src, target = get_src_and_target_from_pickle(t)
-#        np.append(valid_src, src, axis=0)
-#        np.append(valid_target, target, axis=0)
-
-#    for t in test_files:
-#        src, target = get_src_and_target_from_pickle(t)
-#        np.append(test_src, src, axis=0)
-#        np.append(test_target, target, axis=0)
-
-    return train_src, train_target, valid_src, valid_target, test_src, test_target
+train_src, train_labels, l = get_data_set()
 
 
-train_src, train_target, valid_src, valid_target, test_src, test_target = generate_dataset(
-    ["data_batch_1"],
-    ["data_batch_4"],
-    ["data_batch_5"]
-)
-
-#print(np.shape(train_src))
-#print(np.shape(train_target))
-
-
-def accuracy(predictions, lables):
-    return 100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(lables, 1)) / predictions.shape[0]
-
-
-# Create model
-def conv_layer(input_data):
-    filter = tf.Variable(tf.truncated_normal(shape=(filter_size, filter_size, channels, out_channels), dtype=tf.float32))
-    strides = [1, 1, 1, 1]
-    conv = tf.nn.conv2d(input_data, filter=filter, strides=strides, padding='SAME')
-    print("Shape of conv is{}".format(conv.get_shape()))
-    bias = tf.Variable(tf.zeros(channels, dtype=tf.float32))
-    bias_add = tf.add(conv, bias)
-    relu = tf.nn.relu(bias_add)
-    ksize = [1,2,2,1]
-    max_pool = tf.nn.max_pool(relu, ksize=ksize, strides=[1,1,1,1], padding="VALID")
-    return max_pool
-
-
-def fc_layer(input_data, input_size, output_size):
-    print(input_size)
-    print(output_size)
-    weights = tf.truncated_normal(shape=(input_size, output_size), dtype=tf.float32)
-    bias = tf.zeros(shape=(output_size), dtype=tf.float32)
-    matmul = tf.matmul(input_data, weights)
-    bias_add = tf.nn.bias_add(matmul, bias)
-    relu = tf.nn.relu(bias_add)
-    return relu
-
-
-def nn_model(input):
-    rlt_lyr1 = conv_layer(input)
-    rlt_lyr2 = conv_layer(rlt_lyr1)
-    rlt_lyr3 = conv_layer(rlt_lyr2)
-    shape_after_conv = rlt_lyr3.get_shape().as_list()
-    print(shape_after_conv)
-    pixels_size = shape_after_conv[1] * shape_after_conv[2] * shape_after_conv[3]
-    reshape = tf.reshape(rlt_lyr3, [shape_after_conv[0], pixels_size])
-    rlt_lyr4 = fc_layer(reshape, pixels_size, num_hidden_inc)
-    finally_rlt = fc_layer(rlt_lyr4, num_hidden_inc, classes_number)
-    return finally_rlt
+#def accuracy(predictions, lables):
+#    #return 100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(lables, 0)) / predictions.shape[0]
+#   right = 0.0
+#   for i in range(lables.shape[0]):
+#       if predictions[i] == lables[i]:
+#           right += 1
+#   return 100.0 * right / lables.shape[0]
 
 
 with tf.Session() as sess:
-    tf_train_dataset = tf.placeholder(dtype=tf.float32, shape=(batch_size, image_size, image_size, channels))
-    tf_train_lables = tf.placeholder(dtype=tf.float32, shape=(batch_size, classes_number))
+    x, y, output, global_step, y_pred_cls = model()
+    print(x.get_shape())
+    print(y.get_shape())
 
-#    tf_valid_dataset = tf.constant(valid_src)
-#    tf_valid_lables = tf.constant(valid_target)
+    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=output, labels=y))
+    optimizer = tf.train.RMSPropOptimizer(learning_rate=1e-3).minimize(loss, global_step=global_step)
 
-#    tf_test_dataset = tf.placeholder(dtype=tf.float32, shape=(test_count, image_size, image_size, channels))
-#    tf_test_lables = tf.placeholder(dtype=tf.float32, shape=(test_count, classes_number))
+    correct_prediction = tf.equal(y_pred_cls, tf.argmax(y, axis=1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    tf.summary.scalar("Accuracy/train", accuracy)
+    merged = tf.summary.merge_all()
 
-    logits = nn_model(tf_train_dataset)
 
-    loss = tf.reduce_mean(
-        tf.nn.softmax_cross_entropy_with_logits(labels=tf_train_lables, logits=logits))
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate=learing_rate).minimize(loss)
-
-    train_prediction = tf.nn.softmax(nn_model(tf_train_dataset))
-    #vaild_prediction = tf.nn.softmax(nn_model(tf_train_dataset))
-    #train_prediction = tf.nn.softmax(nn_model(tf_train_dataset))
-    tf.global_variables_initializer().run()
-
-    steps = train_count /4  / batch_size
-    print("Total steps is {}".format(steps))
-    for s in range(int(steps)):
-        offset = s * batch_size
-        batch_data = train_src[offset:(offset + batch_size), ...]
-        batch_labels = train_target[offset:(offset + batch_size), ...]
-
-        _, l, predictions = sess.run([optimizer, loss, train_prediction], feed_dict={
-            tf_train_dataset:batch_data,
-            tf_train_lables:batch_labels} )
-
-        if s % 10 == 0:
-            print("Current step is {0}, Loss is {1}, accuary is {2}%".format(s, l, accuracy(predictions, batch_labels)))
+#  layer1
+#    with tf.name_scope('Layer_1') as scope:
+#        filter1 = tf.Variable(tf.random_normal(shape=(filter_size, filter_size, channels, out_channels),
+#                                                  dtype=tf.float32))
+#        conv1 = tf.nn.conv2d(tf_train_dataset, filter=filter1, strides=[1, 1, 1, 1], padding='SAME')
+#        bias1 = tf.Variable(tf.zeros(out_channels, dtype=tf.float32))
+#        bias_add1 = tf.add(conv1, bias1)
+#        relu1 = tf.nn.relu(bias_add1)
+#        max_pool1 = tf.nn.max_pool(relu1, ksize=[1,2,2,1], strides=[1,2,2,1], padding="VALID", name=scope)
+#
+#    # layer2
+#    with tf.name_scope('Layer_2') as scope:
+#        filter2 = tf.Variable(tf.truncated_normal(shape=(filter_size, filter_size, out_channels, out_channels),
+#                                                  dtype=tf.float32, stddev=stddev, seed=SEED))
+#        conv2 = tf.nn.conv2d(max_pool1, filter=filter2, strides=[1, 1, 1, 1], padding='SAME')
+#        bias2 = tf.Variable(tf.zeros(out_channels, dtype=tf.float32))
+#        bias_add2 = tf.add(conv2, bias2)
+#        relu2 = tf.nn.relu(bias_add2)
+#        max_pool2 = tf.nn.max_pool(relu2, ksize=[1,2,2,1], strides=[1,2,2,1], padding="VALID", name=scope)
+#
+#    # layer3
+#    with tf.name_scope('Layer_3') as scope:
+#        filter3 = tf.Variable(tf.truncated_normal(shape=(filter_size, filter_size, out_channels, out_channels),
+#                                                  dtype=tf.float32, stddev=stddev, seed=SEED))
+#        conv3 = tf.nn.conv2d(max_pool2, filter=filter3, strides=[1, 1, 1, 1], padding='SAME')
+#        bias3 = tf.Variable(tf.zeros(out_channels, dtype=tf.float32))
+#        bias_add3 = tf.add(conv3, bias3)
+#        relu3 = tf.nn.relu(bias_add3)
+#        max_pool3 = tf.nn.max_pool(relu3, ksize=[1,2,2,1], strides=[1,2,2,1], padding="VALID", name=scope)
+##        max_pool3 = tf.nn.dropout(max_pool3, dropout_prob, seed=SEED, name="dropout_3")
+#
+#    shape_after_conv = max_pool3.get_shape().as_list()
+#    pixels_size = shape_after_conv[1] * shape_after_conv[2] * shape_after_conv[3]
+#    reshape = tf.reshape(max_pool3, [shape_after_conv[0], pixels_size])
+#
+#    # layer 4
+#    with tf.name_scope('Layer_4') as scope:
+#        weights4 = tf.truncated_normal(shape=(pixels_size, num_hidden_inc), dtype=tf.float32)
+#        bias4 = tf.zeros(shape=[num_hidden_inc], dtype=tf.float32)
+#        matmul4 = tf.matmul(reshape, weights4)
+#        bias_add4 = tf.nn.bias_add(matmul4, bias4)
+#        relu4 = tf.nn.relu(bias_add4, name=scope)
+#
+#    # layer 5
+#    with tf.name_scope('Layer_5') as scope:
+#        weights5 = tf.truncated_normal(shape=(num_hidden_inc, classes_number), dtype=tf.float32, stddev=stddev, seed=SEED)
+#        bias5 = tf.zeros(shape=[classes_number], dtype=tf.float32)
+#        matmul5 = tf.matmul(relu4, weights5)
+#        bias_add5 = tf.nn.bias_add(matmul5, bias5)
+#        logits = tf.nn.relu(bias_add5, name=scope)
+#    loss = tf.reduce_mean(
+#        tf.nn.softmax_cross_entropy_with_logits(labels=tf_train_lables, logits=logits))
+#    regularizers = (tf.nn.l2_loss(weights4) +
+#                    tf.nn.l2_loss(bias4) )
+                    #+tf.nn.l2_loss(weights5) + tf.nn.l2_loss(bias5))
+    # Add the regularization term to the loss.
+    #loss += 5e-4 * regularizers
+#    optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(loss)
+#    train_prediction = tf.nn.softmax(logits)
+#    tf.summary.scalar("loss", loss)
 
     writer = tf.summary.FileWriter("/tmp/cat_dog_logs", sess.graph)
+    tf.global_variables_initializer().run()
 
+    for i in range(num_steps):
+        offset = (i * batch_size) % (train_count - batch_size)
+#        batch_data = mnist.train.images[offset:(offset + batch_size), ...]
+#        batch_labels = mnist.train.labels[offset:(offset + batch_size), ...]
 
+        batch_xs = train_src[offset:(offset + batch_size), ...]
+        batch_ys = train_labels[offset:(offset + batch_size), ...]
 
+        i_global, _ = sess.run([global_step, optimizer], feed_dict={x: batch_xs, y: batch_ys})
 
+        if (i_global % 10 == 0) or (i == num_steps - 1):
+            _loss, batch_acc = sess.run([loss, accuracy], feed_dict={x: batch_xs, y: batch_ys})
+            msg = "Global Step: {0:>6}, accuracy: {1:>6.1%}, loss = {2:.2f})"
+            print(msg.format(i_global, batch_acc, _loss))
 
+#       summary_result, _, l, relu4_rlt, conv1_rlt, relu1_rlt, max_pool1_rlt, reshape_rlt, train_prediction_rlt = sess.run([merged, optimizer, loss, relu4, conv1, relu1, max_pool1, reshape, train_prediction], feed_dict={
+#          tf_train_dataset:batch_data,
+#           tf_train_lables:batch_labels})
 
+#       if s % 10 == 0:
+#           print("Current step is {0}, Loss is {1}, accuracy is {2}".format(s, l, accuracy(train_prediction_rlt, batch_labels)))
 
+#       if s < 3:
+#           for i in range(1):
+#               index = np.argmax(batch_labels[i]).astype(np.uint8)
+#               p_index = np.argmax(train_prediction_rlt[i]).astype(np.uint8)
+#               imsave("./data/{0}_{1}_{2}_{3}.png".format(s, i, label_name[index], label_name[p_index]), batch_data[i])
+#               imsave("./data/{0}_{1}_{2}_{3}_conv1.png".format(s, i, label_name[index], label_name[p_index]), max_pool1_rlt[i])
+#               np.savetxt("./data/{0}_{1}_{2}_{3}_reshape_rlt.txt".format(s, i, label_name[index], label_name[p_index]), reshape_rlt, fmt='%.4f')
+#               np.savetxt("./data/{0}_{1}_{2}_{3}_prediction.txt".format(s, i, label_name[index], label_name[p_index]), train_prediction_rlt, fmt='%.4f')
 
-
-
+#       if s >= 2000 and s % 500 == 0:
+#           index = np.argmax(batch_labels[0]).astype(np.uint8)
+#           p_index = np.argmax(train_prediction_rlt[0]).astype(np.uint8)
+#           imsave("./data/{0}_{1}_{2}.png".format(s, label_name[index], label_name[p_index]), batch_data[0])
+##          imsave("./data/{0}_{1}_{2}_conv1.png".format(s, label_name[index], label_name[p_index]), conv1_rlt[0])
+#           imsave("./data/{0}_{1}_{2}_relu1.png".format(s, label_name[index], label_name[p_index]), relu1_rlt[0])
+#           imsave("./data/{0}_{1}_{2}_pool1.png".format(s, label_name[index], label_name[p_index]), max_pool1_rlt[0])
+#           np.savetxt("./data/{0}_{1}_{2}_{3}_reshape_rlt.txt".format(s, i, label_name[index], label_name[p_index]),
+#                  reshape_rlt, fmt='%.4f')
+#           np.savetxt("./data/{0}_{1}_{2}_{3}_prediction.txt".format(s, i, label_name[index], label_name[p_index]),
+#                  train_prediction_rlt, fmt='%.4f')
+#            imsave("{0}_{1}_{2}_conv2.png".format(s, label_name[index], label_name[p_index]), max_pool1_rlt[0])
+#            imsave("{0}_{1}_{2}_conv3.png".format(s, label_name[index], label_name[p_index]), conv3_rlt[0])
+#       writer.add_summary(summary_result, s)
 
