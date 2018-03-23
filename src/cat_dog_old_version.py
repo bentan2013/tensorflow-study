@@ -39,9 +39,9 @@ valid_count = 10000
 test_count = 10000
 image_size = 32
 channels = 3
-filter_size = 5
+filter_size = 3
 out_channels = channels
-num_hidden_inc = 32
+num_hidden_inc = 100
 batch_size = 128
 classes_number = 10
 learing_rate = 0.1
@@ -202,8 +202,10 @@ def conv_layer(input_data, inc, ouc):
     bias_add = tf.add(conv, bias)
     relu = tf.nn.relu(bias_add)
     ksize = [1,3,3,1]
-    max_pool = tf.nn.max_pool(relu, ksize=ksize, strides=[1,1,1,1], padding="VALID")
-    return max_pool
+    max_pool = tf.nn.max_pool(relu, ksize=ksize, strides=[1,1,1,1], padding="SAME")
+    norm1 = tf.nn.lrn(max_pool, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
+                      name='norm1')
+    return norm1
 
 
 def fc_layer(input_data, input_size, output_size):
@@ -218,15 +220,15 @@ def fc_layer(input_data, input_size, output_size):
 
 
 def nn_model(input):
-    rlt_lyr1 = conv_layer(input, 3, 8)
-    rlt_lyr2 = conv_layer(rlt_lyr1, 8, 16)
-    rlt_lyr3 = conv_layer(rlt_lyr2, 16, 64)
-    shape_after_conv = rlt_lyr3.get_shape().as_list()
+    rlt_lyr1 = conv_layer(input, 3, 64)
+    rlt_lyr2 = conv_layer(rlt_lyr1, 64, 64)
+    shape_after_conv = rlt_lyr2.get_shape().as_list()
     print(shape_after_conv)
     pixels_size = shape_after_conv[1] * shape_after_conv[2] * shape_after_conv[3]
-    reshape = tf.reshape(rlt_lyr3, [-1, pixels_size])
-    rlt_lyr4 = fc_layer(reshape, pixels_size, num_hidden_inc)
-    finally_rlt = fc_layer(rlt_lyr4, num_hidden_inc, classes_number)
+    reshape = tf.reshape(rlt_lyr2, [-1, pixels_size])
+    rlt_lyr4 = fc_layer(reshape, pixels_size, 384)
+    rlt_lyr5 = fc_layer(rlt_lyr4, 384, 192)
+    finally_rlt = fc_layer(rlt_lyr5, 192, classes_number)
     return finally_rlt
 
 
