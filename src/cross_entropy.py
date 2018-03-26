@@ -3,6 +3,10 @@
 
 import tensorflow as tf
 import numpy as np
+import os
+
+data_folder = "./tmp/ckpt/"
+ckpt_name = "cross_entropy.ckpt"
 
 class_1_data = np.random.normal(-1, 0.5, 60)
 class_2_data = np.random.normal(3, 0.5, 60)
@@ -27,47 +31,66 @@ for i in range(20):
     test_r2[i][test_labels[i]] = 1.0
 
 
-steps = 100000
+steps = 1000
 batch_size = 100
 
+xs = tf.placeholder(dtype=tf.float32, shape=(batch_size, 1))
+ys = tf.placeholder(dtype=tf.float32, shape=(batch_size, 2))
+weight = tf.Variable(tf.random_normal(shape=[1, 2], mean=10))
+bias = tf.Variable(tf.random_normal(shape=[1], mean=10))
+out = tf.add(tf.matmul(xs, weight), bias)
+loss = tf.abs(tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=out, labels=ys)))
+opt = tf.train.AdamOptimizer(0.01).minimize(loss)
+prediction = tf.nn.softmax(out)
+
+saver = tf.train.Saver()
+
 with tf.Session() as sess:
-    xs = tf.placeholder(dtype=tf.float32, shape=(batch_size, 1))
-    ys = tf.placeholder(dtype=tf.float32, shape=(batch_size, 2))
-    weight = tf.Variable(tf.random_normal(shape=[1, 2], mean=10))
-    bias = tf.Variable(tf.random_normal(shape=[1], mean=10))
-
-    out = tf.add(tf.matmul(xs, weight), bias)
-
-    loss = tf.abs(tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=out, labels=ys)))
-    opt = tf.train.GradientDescentOptimizer(0.01).minimize(loss)
-    prediction = tf.nn.softmax(out)
-
-    sess.run(tf.global_variables_initializer())
-
-    for i in range(steps):
-        randx = np.zeros(shape=[batch_size, 1])
-        randy = np.zeros(shape=[batch_size, 2])
-
+    ckpt = tf.train.get_checkpoint_state(data_folder)
+    if ckpt is not None:
+        saver.restore(sess, ckpt.model_checkpoint_path)
         testx = np.zeros(shape=[batch_size, 1])
         testy = np.zeros(shape=[batch_size, 2])
-
         for j in range(batch_size):
-            ri = np.random.choice(100)
             ti = np.random.choice(20)
-            randx[j] = train_data[ri]
-            randy[j] = labels_r2[ri]
             testx[j] = test_data[ti]
             testy[j] = test_r2[ti]
-        _, l, b = sess.run([opt, loss, bias], feed_dict={xs:randx, ys:randy})
-        if i % 100 == 0:
-           print("Loss is {0}, A is {1}".format(l, b))
-        if i % 1000 == 0:
-            predic, labels, w, b = sess.run([prediction, ys, weight, bias], feed_dict={xs:testx, ys:testy})
-            acc = 100.0 * np.sum(np.argmax(predic, 1) == np.argmax(labels, 1)) / predic.shape[0]
-            print("A is {0}, Accuracy is {1}%".format(b, acc))
-            print(w)
-            print(b)
+        predic, labels, w, b = sess.run([prediction, ys, weight, bias], feed_dict={xs:testx, ys:testy})
+        acc = 100.0 * np.sum(np.argmax(predic, 1) == np.argmax(labels, 1)) / predic.shape[0]
+        print("A is {0}, Accuracy is {1}%".format(b, acc))
+        print(w)
+        print(b)
+    else:
+        sess.run(tf.global_variables_initializer())
 
+        for i in range(steps):
+            randx = np.zeros(shape=[batch_size, 1])
+            randy = np.zeros(shape=[batch_size, 2])
+
+            testx = np.zeros(shape=[batch_size, 1])
+            testy = np.zeros(shape=[batch_size, 2])
+
+            for j in range(batch_size):
+                ri = np.random.choice(100)
+                ti = np.random.choice(20)
+                randx[j] = train_data[ri]
+                randy[j] = labels_r2[ri]
+                testx[j] = test_data[ti]
+                testy[j] = test_r2[ti]
+            _, l, b = sess.run([opt, loss, bias], feed_dict={xs:randx, ys:randy})
+            if i % 100 == 0:
+                print("Loss is {0}, A is {1}".format(l, b))
+            if i % 1000 == 0:
+                predic, labels, w, b = sess.run([prediction, ys, weight, bias], feed_dict={xs:testx, ys:testy})
+                acc = 100.0 * np.sum(np.argmax(predic, 1) == np.argmax(labels, 1)) / predic.shape[0]
+                print("A is {0}, Accuracy is {1}%".format(b, acc))
+                print(w)
+                print(b)
+
+        model_checkpoint_path = os.path.join("c:/tmp/ckpt/", "cross_entropy.ckpt")
+        # write ckpt
+        save_path = saver.save(sess, model_checkpoint_path)
+        print("Model is saved here: {}".format(save_path))
 
 
 
