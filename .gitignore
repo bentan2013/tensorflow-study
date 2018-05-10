@@ -2,3 +2,6 @@
 /*.gitignore~
 /src/*.png
 /src/.picasa.ini
+/.idea
+/src/data
+/src/tmp/trans_study_test
