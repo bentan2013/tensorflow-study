@@ -1,3 +1,5 @@
+tensorflow
+tensorflow-tensorboard
 scipy
 six
 matplotlib
