@@ -20,11 +20,10 @@ Project: https://github.com/aymericdamien/TensorFlow-Examples/
 
 from __future__ import print_function
 
+import tensorflow as tf
 # Import MNIST data
 from tensorflow.examples.tutorials.mnist import input_data
 mnist = input_data.read_data_sets("/tmp/data/", one_hot=False)
-
-import tensorflow as tf
 
 # Parameters
 learning_rate = 0.1
@@ -65,7 +64,7 @@ def model_fn(features, labels, mode):
     if mode == tf.estimator.ModeKeys.PREDICT:
         return tf.estimator.EstimatorSpec(mode, predictions=pred_classes)
 
-        # Define loss and optimizer
+    # Define loss and optimizer
     loss_op = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
         logits=logits, labels=tf.cast(labels, dtype=tf.int32)))
     optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
@@ -85,6 +84,7 @@ def model_fn(features, labels, mode):
         eval_metric_ops={'accuracy': acc_op})
 
     return estim_specs
+
 
 # Build the Estimator
 model = tf.estimator.Estimator(model_fn)

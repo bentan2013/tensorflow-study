@@ -19,7 +19,7 @@ price_np = np.zeros((count, 1), dtype=np.float32)
 info_np = np.zeros((count, 2), dtype=np.float32)
 
 index = 0
-csv_file = "../data/house_price_number.csv"
+csv_file = "../data/beijing_x_y_price.csv"
 
 with open(csv_file, 'rt', encoding='utf-8') as ifile:
     reader = csv.DictReader(ifile)

@@ -8,13 +8,11 @@ input = tf.linspace(-1., 1., 500, "input")
 output = tf.constant(0., name="output")
 
 
-
-
 sess = tf.Session()
 
-show_regression_loss = False
+show_regression_loss = True
 
-if show_regression_loss is True:
+if show_regression_loss is False:
     # for regression
     l1_loss = tf.abs(output - input)
     l2_loss = tf.square(output - input)
@@ -27,7 +25,7 @@ if show_regression_loss is True:
     plt.show()
 else:
     # for classification
-    x_vals = tf.linspace(-3., 5., 500, "x_vals")
+    x_vals = tf.linspace(-30., 50., 500, "x_vals")
     target = tf.constant(1.)
     targets = tf.fill([500,], target)
     cross_entropy_loss = - tf.multiply(targets,
@@ -35,7 +33,7 @@ else:
                                                                   tf.log(1. -x_vals)))
     x_vals_src = sess.run(x_vals)
     cross_entropy_loss_out = sess.run(cross_entropy_loss)
-    plt.plot(x_vals_src, cross_entropy_loss_out, 'g--', label='Cross entropy')
+    plt.plot(x_vals_src, x_vals_src, 'g--', label='Cross entropy')
     plt.ylim(-1.5, 3)
     plt.legend(loc='lower right')
     plt.show()

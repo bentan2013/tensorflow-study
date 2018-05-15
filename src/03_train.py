@@ -13,16 +13,17 @@ import os
 
 
 # 运行 >tensorboard --logdir=C:/Projects/tensorflow-study/src/tmp/trans_study_test则可以在浏览器中看到
-data_folder = "c:/tmp/trans_study"
-ckpt_name = "trans_study_test.ckpt"
+data_folder = "../tmp/03_train"
+ckpt_name = "03_train.ckpt"
+model_checkpoint_path = os.path.join(data_folder, ckpt_name)
+verify_ckpt_path= os.path.join(data_folder, "checkpoint")
 
 class_1_data = np.random.normal(-1, 0.5, 60)
 class_2_data = np.random.normal(3, 0.5, 60)
 
-
 train_data = np.concatenate((class_1_data[:50], class_2_data[:50]))
 train_data = np.reshape(train_data, newshape=(100,1))
-train_labels = np.concatenate((np.repeat(0, 50 ), np.repeat(1, 50)))
+train_labels = np.concatenate((np.repeat(0, 50), np.repeat(1, 50)))
 labels_r2 = np.zeros(shape=(100, 2), dtype=np.float32)
 
 test_data = np.reshape(np.concatenate((class_1_data[50:], class_2_data[50:])), newshape=(20, 1))
@@ -75,7 +76,6 @@ def train_model():
                 print(w)
                 print(b)
 
-        model_checkpoint_path = os.path.join(data_folder, ckpt_name)
         if not os.path.exists(data_folder):
             os.makedirs(data_folder)
         # write ckpt
@@ -104,8 +104,10 @@ def predict_with_model():
 
 
 if __name__ == "__main__":
-    #train_model()
-    predict_with_model()
+    if os.path.exists(verify_ckpt_path) is True:
+        predict_with_model()
+    else:
+        train_model()
 
 
 

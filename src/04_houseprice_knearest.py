@@ -109,11 +109,15 @@ for i in range(num_loops):
 # Plot prediction and actual distribution
 bins = np.linspace(5, 50, 45)
 
-plt.hist(predictions, bins, alpha=0.5, label='Prediction')
-plt.hist(y_batch, bins, alpha=0.5, label='Actual')
-plt.title('Histogram of Predicted and Actual Values')
-plt.xlabel('Med Home Value in $1,000s')
-plt.ylabel('Frequency')
-plt.legend(loc='upper right')
+
+# plt.hist(predictions, bins, alpha=0.5, label='Prediction')
+# plt.hist(y_batch, bins, alpha=0.5, label='Actual')
+# plt.title('Histogram of Predicted and Actual Values')
+# plt.xlabel('Med Home Value in $1,000s')
+# plt.ylabel('Frequency')
+# plt.legend(loc='upper right')
+
+# I think the error is not acceptable
+plt.scatter(y_batch, np.abs(predictions - y_batch)/y_batch, label='Fitting Line')
 plt.show()
 

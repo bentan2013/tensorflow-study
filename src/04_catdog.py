@@ -1,17 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
-import os
 import tensorflow as tf
 import numpy as np
 import pickle
-from scipy import ndimage
-from scipy.misc import imresize, imsave
+from scipy.misc import imsave
 
 
-
-data_folder = "d:\\data\\cifar-10-batches-py\\"
+data_folder = "../data/cifar-10-batches-py/"
 
 # http://www.cs.toronto.edu/~kriz/cifar.html
 
@@ -22,7 +18,6 @@ data_folder = "d:\\data\\cifar-10-batches-py\\"
 # labels -- a list of 10000 numbers in the range 0-9. The number at index i indicates the label of the ith image in the array data.
 
 # Be familiar with CIFAR-10 dataset
-
 label_name = [
     'airplane',
     'automobile',
@@ -188,17 +183,14 @@ def get_data_set(name="train", cifar=10):
     y = None
     l = None
 
-
-    folder_name = "cifar-10-batches-py"
-
-    f = open('d:/data/'+folder_name+'/batches.meta', 'rb')
+    f = open(data_folder + 'batches.meta', 'rb')
     datadict = pickle.load(f, encoding='latin1')
     f.close()
     l = datadict['label_names']
 
     if name is "train":
         for i in range(5):
-            f = open('d:/data/'+folder_name+'/data_batch_' + str(i + 1), 'rb')
+            f = open(data_folder + 'data_batch_' + str(i + 1), 'rb')
             datadict = pickle.load(f, encoding='latin1')
             f.close()
 
@@ -218,7 +210,7 @@ def get_data_set(name="train", cifar=10):
                 y = np.concatenate((y, _Y), axis=0)
 
     elif name is "test":
-        f = open('./data_set/'+folder_name+'/test_batch', 'rb')
+        f = open(data_folder + 'test_batch', 'rb')
         datadict = pickle.load(f, encoding='latin1')
         f.close()
 
@@ -244,15 +236,6 @@ def get_data_set(name="train", cifar=10):
 train_src, train_labels, l = get_data_set()
 
 
-#def accuracy(predictions, lables):
-#    #return 100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(lables, 0)) / predictions.shape[0]
-#   right = 0.0
-#   for i in range(lables.shape[0]):
-#       if predictions[i] == lables[i]:
-#           right += 1
-#   return 100.0 * right / lables.shape[0]
-
-
 with tf.Session() as sess:
     x, y, output, global_step, y_pred_cls = model()
     print(x.get_shape())
@@ -266,75 +249,11 @@ with tf.Session() as sess:
     tf.summary.scalar("Accuracy/train", accuracy)
     merged = tf.summary.merge_all()
 
-
-#  layer1
-#    with tf.name_scope('Layer_1') as scope:
-#        filter1 = tf.Variable(tf.random_normal(shape=(filter_size, filter_size, channels, out_channels),
-#                                                  dtype=tf.float32))
-#        conv1 = tf.nn.conv2d(tf_train_dataset, filter=filter1, strides=[1, 1, 1, 1], padding='SAME')
-#        bias1 = tf.Variable(tf.zeros(out_channels, dtype=tf.float32))
-#        bias_add1 = tf.add(conv1, bias1)
-#        relu1 = tf.nn.relu(bias_add1)
-#        max_pool1 = tf.nn.max_pool(relu1, ksize=[1,2,2,1], strides=[1,2,2,1], padding="VALID", name=scope)
-#
-#    # layer2
-#    with tf.name_scope('Layer_2') as scope:
-#        filter2 = tf.Variable(tf.truncated_normal(shape=(filter_size, filter_size, out_channels, out_channels),
-#                                                  dtype=tf.float32, stddev=stddev, seed=SEED))
-#        conv2 = tf.nn.conv2d(max_pool1, filter=filter2, strides=[1, 1, 1, 1], padding='SAME')
-#        bias2 = tf.Variable(tf.zeros(out_channels, dtype=tf.float32))
-#        bias_add2 = tf.add(conv2, bias2)
-#        relu2 = tf.nn.relu(bias_add2)
-#        max_pool2 = tf.nn.max_pool(relu2, ksize=[1,2,2,1], strides=[1,2,2,1], padding="VALID", name=scope)
-#
-#    # layer3
-#    with tf.name_scope('Layer_3') as scope:
-#        filter3 = tf.Variable(tf.truncated_normal(shape=(filter_size, filter_size, out_channels, out_channels),
-#                                                  dtype=tf.float32, stddev=stddev, seed=SEED))
-#        conv3 = tf.nn.conv2d(max_pool2, filter=filter3, strides=[1, 1, 1, 1], padding='SAME')
-#        bias3 = tf.Variable(tf.zeros(out_channels, dtype=tf.float32))
-#        bias_add3 = tf.add(conv3, bias3)
-#        relu3 = tf.nn.relu(bias_add3)
-#        max_pool3 = tf.nn.max_pool(relu3, ksize=[1,2,2,1], strides=[1,2,2,1], padding="VALID", name=scope)
-##        max_pool3 = tf.nn.dropout(max_pool3, dropout_prob, seed=SEED, name="dropout_3")
-#
-#    shape_after_conv = max_pool3.get_shape().as_list()
-#    pixels_size = shape_after_conv[1] * shape_after_conv[2] * shape_after_conv[3]
-#    reshape = tf.reshape(max_pool3, [shape_after_conv[0], pixels_size])
-#
-#    # layer 4
-#    with tf.name_scope('Layer_4') as scope:
-#        weights4 = tf.truncated_normal(shape=(pixels_size, num_hidden_inc), dtype=tf.float32)
-#        bias4 = tf.zeros(shape=[num_hidden_inc], dtype=tf.float32)
-#        matmul4 = tf.matmul(reshape, weights4)
-#        bias_add4 = tf.nn.bias_add(matmul4, bias4)
-#        relu4 = tf.nn.relu(bias_add4, name=scope)
-#
-#    # layer 5
-#    with tf.name_scope('Layer_5') as scope:
-#        weights5 = tf.truncated_normal(shape=(num_hidden_inc, classes_number), dtype=tf.float32, stddev=stddev, seed=SEED)
-#        bias5 = tf.zeros(shape=[classes_number], dtype=tf.float32)
-#        matmul5 = tf.matmul(relu4, weights5)
-#        bias_add5 = tf.nn.bias_add(matmul5, bias5)
-#        logits = tf.nn.relu(bias_add5, name=scope)
-#    loss = tf.reduce_mean(
-#        tf.nn.softmax_cross_entropy_with_logits(labels=tf_train_lables, logits=logits))
-#    regularizers = (tf.nn.l2_loss(weights4) +
-#                    tf.nn.l2_loss(bias4) )
-                    #+tf.nn.l2_loss(weights5) + tf.nn.l2_loss(bias5))
-    # Add the regularization term to the loss.
-    #loss += 5e-4 * regularizers
-#    optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(loss)
-#    train_prediction = tf.nn.softmax(logits)
-#    tf.summary.scalar("loss", loss)
-
-    writer = tf.summary.FileWriter("/tmp/cat_dog_logs", sess.graph)
+    writer = tf.summary.FileWriter("../tmp/04_catdog", sess.graph)
     tf.global_variables_initializer().run()
 
     for i in range(num_steps):
         offset = (i * batch_size) % (train_count - batch_size)
-#        batch_data = mnist.train.images[offset:(offset + batch_size), ...]
-#        batch_labels = mnist.train.labels[offset:(offset + batch_size), ...]
 
         batch_xs = train_src[offset:(offset + batch_size), ...]
         batch_ys = train_labels[offset:(offset + batch_size), ...]
